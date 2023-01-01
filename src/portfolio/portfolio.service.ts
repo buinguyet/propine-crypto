@@ -5,10 +5,48 @@ import { DetailPortfolioDto } from './dto/detail-portfolio.dto';
 import { ListPortfolioDto } from './dto/list-portfolio-dto';
 import { addDayTimestamp, toTimestamp } from '../common/utils';
 import axios from 'axios';
+import { ResponsePortfolioDto } from './dto/response-portfolio.dto';
 
 @Injectable()
 export class PortfolioService {
-  getAllLatestPortfolio(filters: ListPortfolioDto) {
+  async getConvertAmount(token: string, timestamp: string) {
+    const API = `${process.env.CRYPTO_COMPARE_API}/data/v2/histoday?api_key=${process.env.CRYPTO_COMPARE_API_KEY}&fsym=${token}&tsym=USD&limit=1&toTs=${timestamp}`;
+
+    const convertAmount = await axios({
+      url: API,
+      method: 'GET',
+    });
+
+    return convertAmount.data;
+  }
+
+  async convertAmountData(data: any) {
+    const convertData: ResponsePortfolioDto[] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const rsData: ResponsePortfolioDto = { ...data[i] };
+
+      const convertAmount = await this.getConvertAmount(
+        data[i].token,
+        data[i].timestamp,
+      );
+
+      let rate = 1;
+      if (convertAmount?.Data?.Data) {
+        rate =
+          convertAmount?.Data?.Data[convertAmount?.Data?.Data?.length - 1]
+            ?.close;
+      }
+
+      rsData.amount = Number(data[i].amount) * rate;
+
+      convertData.push(rsData);
+    }
+
+    return convertData;
+  }
+
+  async getAllLatestPortfolio(filters: ListPortfolioDto) {
     const { date } = filters;
     const result = [];
 
@@ -16,11 +54,10 @@ export class PortfolioService {
     const csvStream = csv();
 
     try {
-      const data = new Promise((resolve) => {
+      const data: any = new Promise((resolve) => {
         fsStream
           .pipe(csvStream)
-          .on('data', (row) => {
-            const convertAmount = 10000;
+          .on('data', async (row) => {
             if (date) {
               const startTimestamp = toTimestamp(date);
               const endTimestamp = addDayTimestamp(startTimestamp);
@@ -29,10 +66,7 @@ export class PortfolioService {
                 Number(row['timestamp']) >= startTimestamp &&
                 Number(row['timestamp']) <= endTimestamp
               ) {
-                result.push({
-                  ...row,
-                  amount: row['amount'] * convertAmount,
-                });
+                result.push(row);
               } else {
                 csvStream.end();
               }
@@ -42,10 +76,7 @@ export class PortfolioService {
               );
               if (findItem === -1) {
                 if (row.token) {
-                  result.push({
-                    ...row,
-                    amount: row['amount'] * convertAmount,
-                  });
+                  result.push(row);
                 }
               } else {
                 csvStream.end();
@@ -58,6 +89,8 @@ export class PortfolioService {
             console.log('CSV file successfully processed');
             resolve(true);
           });
+      }).then(async (result) => {
+        return await this.convertAmountData(result);
       });
 
       return data;
@@ -73,15 +106,6 @@ export class PortfolioService {
     const csvStream = csv();
 
     try {
-      let convertCoin = 1;
-      if (token && !date) {
-        const API = `${process.env.COIN_BASE_API}/api/live?access_key=${process.env.COIN_BASE_ACCESS_KEY}&symbols=${token}`;
-        convertCoin = (await (await axios.get(API))?.data?.rates[token]) || 1;
-      } else if (date && token) {
-        const API = `${process.env.COIN_BASE_API}/${date}?access_key=${process.env.COIN_BASE_ACCESS_KEY}&symbols=${token}`;
-        convertCoin = (await (await axios.get(API))?.data?.rates[token]) || 1;
-      }
-
       const result = [];
 
       const data = new Promise((resolve) => {
@@ -94,11 +118,7 @@ export class PortfolioService {
               );
 
               if (findItem === -1) {
-                const convertAmount = Number(row['amount']) * convertCoin;
-                result.push({
-                  ...row,
-                  amount: row['amount'] * convertAmount,
-                });
+                result.push(row);
               } else {
                 csvStream.end();
               }
@@ -110,11 +130,7 @@ export class PortfolioService {
                 Number(row['timestamp']) >= startTimestamp &&
                 Number(row['timestamp']) <= endTimestamp
               ) {
-                const convertAmount = Number(row['amount']) * convertCoin;
-                result.push({
-                  ...row,
-                  amount: row['amount'] * convertAmount,
-                });
+                result.push(row);
               } else {
                 csvStream.end();
               }
@@ -126,6 +142,8 @@ export class PortfolioService {
             console.log('CSV file successfully processed');
             resolve(true);
           });
+      }).then(async (result) => {
+        return await this.convertAmountData(result);
       });
 
       return data;
