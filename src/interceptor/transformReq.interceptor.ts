@@ -21,9 +21,9 @@ export class TransformInterceptor<T>
   implements NestInterceptor<T, Response<T>>
 {
   errorException = (err: any) => {
-    const statusCode = err.status || 500;
-    const message = err.message;
-    const error = err.error;
+    const statusCode = err?.response?.statusCode || err.status || 500;
+    const message = err?.response?.message || err.message;
+    const error = err?.response?.error || err.error;
     const data = null;
     return {
       statusCode,

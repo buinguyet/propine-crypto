@@ -1,5 +1,16 @@
-export class DetailPortfolioDto {
-  date?: string;
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
-  token?: string;
+export class DetailPortfolioDto {
+  @IsNotEmpty()
+  @IsString()
+  token: string;
+
+  @IsOptional()
+  @IsDateString()
+  date?: string;
 }
