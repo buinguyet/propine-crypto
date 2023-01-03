@@ -24,8 +24,6 @@ async function downloadTemplate() {
 }
 
 function unzip() {
-  console.log('here');
-
   decompress('template/transactions.zip', 'template')
     .then((files) => {
       console.log('finish unzip files');
