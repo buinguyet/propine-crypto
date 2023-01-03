@@ -9,7 +9,7 @@ import { ResponsePortfolioDto } from './dto/response-portfolio.dto';
 
 @Injectable()
 export class PortfolioService {
-  async getConvertAmount(token: string, timestamp: string) {
+  async getConvertAmount(token: string, timestamp: string | number) {
     const API = `${process.env.CRYPTO_COMPARE_API}/data/v2/histoday?api_key=${process.env.CRYPTO_COMPARE_API_KEY}&fsym=${token}&tsym=USD&limit=1&toTs=${timestamp}`;
 
     const convertAmount = await axios({
@@ -20,30 +20,68 @@ export class PortfolioService {
     return convertAmount.data;
   }
 
-  async convertAmountData(data: any) {
-    const convertData: ResponsePortfolioDto[] = [];
+  async convertAmountData(data: any, timestamp?: string | number) {
+    if (timestamp) {
+      const token = [];
+      for (let k = 0; k < data.length; k++) {
+        const findItem = token.findIndex(
+          (item: ResponsePortfolioDto) => item === data[k].token,
+        );
 
-    for (let i = 0; i < data.length; i++) {
-      const rsData: ResponsePortfolioDto = { ...data[i] };
-
-      const convertAmount = await this.getConvertAmount(
-        data[i].token,
-        data[i].timestamp,
-      );
-
-      let rate = 1;
-      if (convertAmount?.Data?.Data) {
-        rate =
-          convertAmount?.Data?.Data[convertAmount?.Data?.Data?.length - 1]
-            ?.close;
+        if (findItem === -1) {
+          token.push(data[k].token);
+        }
       }
 
-      rsData.amount = Number(data[i].amount) * rate;
+      const tokenRate = {};
+      for (let i = 0; i < token.length; i++) {
+        const convertAmount = await this.getConvertAmount(token[i], timestamp);
 
-      convertData.push(rsData);
+        let rate = 1;
+        if (convertAmount?.Data?.Data) {
+          rate =
+            convertAmount?.Data?.Data[convertAmount?.Data?.Data?.length - 1]
+              ?.close;
+        }
+
+        tokenRate[token[i]] = rate;
+      }
+
+      const convertData: ResponsePortfolioDto[] = [];
+      for (let j = 0; j < data.length; j++) {
+        const rsData: ResponsePortfolioDto = { ...data[j] };
+
+        rsData.amount = Number(data[j].amount) * tokenRate[data[j].token];
+
+        convertData.push(rsData);
+      }
+
+      return convertData;
+    } else {
+      const convertData: ResponsePortfolioDto[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const rsData: ResponsePortfolioDto = { ...data[i] };
+
+        const convertAmount = await this.getConvertAmount(
+          data[i].token,
+          data[i].timestamp,
+        );
+
+        let rate = 1;
+        if (convertAmount?.Data?.Data) {
+          rate =
+            convertAmount?.Data?.Data[convertAmount?.Data?.Data?.length - 1]
+              ?.close;
+        }
+
+        rsData.amount = Number(data[i].amount) * rate;
+
+        convertData.push(rsData);
+      }
+
+      return convertData;
     }
-
-    return convertData;
   }
 
   async getAllLatestPortfolio(filters: ListPortfolioDto) {
@@ -53,15 +91,20 @@ export class PortfolioService {
     const fsStream = fs.createReadStream('template/transactions.csv');
     const csvStream = csv();
 
+    let startTimestamp = 0;
+    let endTimestamp = 0;
+
+    if (date) {
+      startTimestamp = toTimestamp(date);
+      endTimestamp = addDayTimestamp(startTimestamp);
+    }
+
     try {
       const data: any = new Promise((resolve) => {
         fsStream
           .pipe(csvStream)
           .on('data', async (row) => {
             if (date) {
-              const startTimestamp = toTimestamp(date);
-              const endTimestamp = addDayTimestamp(startTimestamp);
-
               if (
                 Number(row['timestamp']) >= startTimestamp &&
                 Number(row['timestamp']) <= endTimestamp
@@ -90,7 +133,7 @@ export class PortfolioService {
             resolve(true);
           });
       }).then(async (result) => {
-        return await this.convertAmountData(result);
+        return await this.convertAmountData(result, startTimestamp);
       });
 
       return data;
@@ -101,13 +144,20 @@ export class PortfolioService {
 
   async getByTokenAndDate(filters: DetailPortfolioDto) {
     const { token, date } = filters;
+    const result = [];
 
     const fsStream = fs.createReadStream('template/transactions.csv');
     const csvStream = csv();
 
-    try {
-      const result = [];
+    let startTimestamp = 0;
+    let endTimestamp = 0;
 
+    if (date) {
+      startTimestamp = toTimestamp(date);
+      endTimestamp = addDayTimestamp(startTimestamp);
+    }
+
+    try {
       const data = new Promise((resolve) => {
         fsStream
           .pipe(csvStream)
@@ -123,9 +173,6 @@ export class PortfolioService {
                 csvStream.end();
               }
             } else if (date && row['token'] === token) {
-              const startTimestamp = toTimestamp(date);
-              const endTimestamp = addDayTimestamp(startTimestamp);
-
               if (
                 Number(row['timestamp']) >= startTimestamp &&
                 Number(row['timestamp']) <= endTimestamp
@@ -143,7 +190,7 @@ export class PortfolioService {
             resolve(true);
           });
       }).then(async (result) => {
-        return await this.convertAmountData(result);
+        return await this.convertAmountData(result, startTimestamp);
       });
 
       return data;
