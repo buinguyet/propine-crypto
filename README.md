@@ -29,45 +29,33 @@
 ## Installation
 
 ```bash
-$ npm install
+$ yarn install
 ```
 
 ## Running the app
 
 ```bash
 # development
-$ npm run start
+$ yarn run start
 
 # watch mode
-$ npm run start:dev
+$ yarn run start:dev
 
-# production mode
-$ npm run start:prod
 ```
 
 ## Test
 
 ```bash
-# unit tests
-$ npm run test
+# Given no parameters, return the latest portfolio value per token in USD
+$ curl http://localhost:8900/portfolio
 
-# e2e tests
-$ npm run test:e2e
+# Given a token, return the latest portfolio value for that token in USD
+$ curl http://localhost:8900/portfolio/detail?token=${TOKEN_NAME}
 
-# test coverage
-$ npm run test:cov
+# Given a date, return the portfolio value per token in USD on that date
+$ curl http://localhost:8900/portfolio?date=${YYYY-MM-DD}
+
+# Given a date and a token, return the portfolio value of that token in USD on that date
+$ curl http://localhost:8900/portfolio/detail?token=${TOKEN_NAME}&date=${YYYY-MM-DD}
+
 ```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
