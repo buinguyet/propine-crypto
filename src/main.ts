@@ -38,7 +38,7 @@ function unzip() {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
-  app.use(BodyParser.urlencoded({ extended: false, limit: '8mb' }));
+  app.use(BodyParser.urlencoded({ extended: false }));
   app.useGlobalPipes(
     new ValidationPipe({ transform: true, forbidUnknownValues: false }),
   );

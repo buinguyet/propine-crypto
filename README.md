@@ -24,7 +24,7 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Propine-crypto is a application which get the infomation of any portfolio value in USD
 
 ## Installation
 
@@ -33,6 +33,10 @@ $ yarn install
 ```
 
 ## Running the app
+
+For the first time running the project, please wait for donwload file from S3 and unzip that file until you get
+the log [finish unzip files].
+From the second time, the csv file is exist in your project aleady, so you will see the log [file exist]
 
 ```bash
 # development
