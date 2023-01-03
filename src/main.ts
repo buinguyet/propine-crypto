@@ -6,7 +6,7 @@ import * as decompress from 'decompress';
 import * as fs from 'fs';
 import axios from 'axios';
 
-async function downloadImage() {
+async function downloadTemplate() {
   const writer = fs.createWriteStream('template/transactions.zip');
 
   const response = await axios({
@@ -46,7 +46,7 @@ async function bootstrap() {
   if (fs.existsSync('template/transactions.zip')) {
     console.log('file exist');
   } else {
-    await downloadImage();
+    await downloadTemplate();
     unzip();
   }
 
