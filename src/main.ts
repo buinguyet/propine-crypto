@@ -7,6 +7,10 @@ import * as fs from 'fs';
 import axios from 'axios';
 
 async function downloadTemplate() {
+  if (!fs.existsSync('template/')) {
+    fs.mkdirSync('template/');
+  }
+
   const writer = fs.createWriteStream('template/transactions.zip');
 
   const response = await axios({
